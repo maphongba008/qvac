@@ -1,0 +1,1 @@
+bare-pack --platform ios --linked --out worklet/app-ios.bundle worklet/app.cjs
