@@ -1,7 +1,10 @@
 const HyperDriveDL = require("qvac-lib-dl-hyperdrive");
+const Hyperswarm = require("hyperswarm");
+const Hyperbee = require("hyperbee");
 const MLCMarian = require("qvac-lib-inference-addon-mlc-marian");
 const CoreStore = require("corestore");
 const QvacMlcModelAddon = require("qvac-mlc-model-addon");
+const b4a = require("b4a");
 
 const { TRANSLATE, LOAD_MODEL, INIT_SOURCE } = require("./api");
 
@@ -26,20 +29,97 @@ function getConfig() {
 
 let model;
 let hdDL;
+let db;
+let store;
 
-function initModelConfigSource({ dirPath }) {
+async function initModelConfigSource({ dirPath, inputLang, outputLang }) {
   const pathToCoreStore = dirPath.substring("file://".length, dirPath.length);
 
-  hdDL = new HyperDriveDL({
-    key: "hd://a4ba71c061535d4b7481ec41f0deb1b8abd77fe4d49181c01b962c483bdba5dc", // TODO: Pass real key
-    store: new CoreStore(pathToCoreStore),
+  if (db && store) {
+    console.log(
+      ">>> [initModelConfigSource]: db and store already initialized switching model config source"
+    );
+    return await switchModelConfigSource({ inputLang, outputLang });
+  }
+
+  store = new CoreStore(pathToCoreStore);
+
+  console.log(">>> [initModelConfigSource]: coreStore initialized");
+
+  const hyperbeeKey =
+    "8286a6d592f57751554c272cf52397770347117021c0fc54873f2c0ac7e0c467";
+
+  core = store.get({ key: b4a.from(hyperbeeKey, "hex") });
+
+  console.log(">>> [initModelConfigSource]: coreStore.get called");
+
+  await core.ready();
+
+  console.log(">>> [initModelConfigSource]: core ready");
+
+  db = new Hyperbee(core, {
+    keyEncoding: "utf-8",
+    valueEncoding: "binary",
   });
 
-  console.log(">>> [initModelConfigSource]: hdDL initialized");
+  await db.ready();
+
+  console.log(">>> [initModelConfigSource]: db ready");
+
+  const swarm = new Hyperswarm();
+
+  swarm.on("connection", (conn) => {
+    console.log("new connection");
+
+    db.replicate(conn);
+  });
+
+  console.log(">>> [initModelConfigSource]: swarm on called");
+
+  const foundPeers = db.core.findingPeers();
+
+  console.log(">>> [initModelConfigSource]: foundPeers loaded");
+
+  swarm.join(db.discoveryKey, { client: true, server: false });
+
+  console.log(">>> [initModelConfigSource]: swarm joined");
+
+  foundPeers();
+
+  console.log(">>> [initModelConfigSource]: foundPeers called");
+
+  await new Promise((resolve) => setTimeout(resolve, 10000));
+
+  await switchModelConfigSource({ inputLang, outputLang });
+}
+
+async function switchModelConfigSource({ inputLang, outputLang }) {
+  const driveKey = await db.get(`${inputLang}-${outputLang}`);
+
+  console.log(">>> [switchModelConfigSource]: drive key", driveKey);
+
+  console.log(
+    ">>> [switchModelConfigSource]: driveKey",
+    b4a.toString(driveKey.value, "hex")
+  );
+
+  hdDL = null;
+
+  hdDL = new HyperDriveDL({
+    key: `hd://${b4a.toString(driveKey.value, "hex")}`,
+    store,
+  });
+
+  await hdDL.ready();
+
+  console.log(">>> [switchModelConfigSource]: hdDL initialized");
 }
 
 async function loadWeightsAndConfigs({ inputLanguage, outputLanguage }) {
   const modelFilesConfig = getConfig();
+
+  await hdDL.ready();
+  console.log(">>> [loadWeightsAndConfigs]: hdDL ready");
 
   const args = {
     loader: hdDL,
@@ -51,7 +131,11 @@ async function loadWeightsAndConfigs({ inputLanguage, outputLanguage }) {
 
   model = new MLCMarian(args, modelFilesConfig);
 
-  console.log(">>> [loadWeightsAndConfigs]: model created");
+  console.log(
+    ">>> [loadWeightsAndConfigs]: model created with",
+    args,
+    modelFilesConfig
+  );
 
   console.time(">>> [loadWeightsAndConfigs]: model load time");
   await model.load();
@@ -82,10 +166,22 @@ async function translateStream(text, req) {
 const rpc = new BareKit.RPC((req) => {
   switch (req.command) {
     case INIT_SOURCE:
-      const directory = req?.data?.toString();
-      initModelConfigSource({ dirPath: directory });
-      req.reply("initialized");
+      const [directory, inputLang, outputLang] = req?.data
+        ?.toString()
+        .split("::");
+
+      console.log(">>> [INIT_SOURCE]: directory", directory);
+
+      initModelConfigSource({ dirPath: directory, inputLang, outputLang })
+        .then(() => {
+          req.reply("initialized");
+        })
+        .catch((error) => {
+          console.log(">>> [INIT_SOURCE]: failed ", error);
+          req.reply(`initialization failed + ${error.toString()}`);
+        });
       break;
+
     case LOAD_MODEL:
       const data = req?.data?.toString();
       const [inputLanguage, outputLanguage] = data?.split("::");

@@ -73,12 +73,13 @@ export default function App() {
     if (!worklet || !fileUri) return;
     worklet.start(fileUri);
     initModelConfigSource();
-    loadModel();
   }, [worklet, fileUri]);
 
   useEffect(() => {
+    console.log(">>> [UI] modelState: ", modelState);
     if (modelState === "loading") return;
-    loadModel();
+    initModelConfigSource();
+
     setTranslatedText("");
     setInputText("");
   }, [languagePair]);
@@ -91,12 +92,22 @@ export default function App() {
 
   function initModelConfigSource() {
     if (!directoryPath) return;
+
+    setModelState("loading");
+
     const req = rpc.request(INIT_SOURCE);
-    req.send(directoryPath);
+
+    const inputLanguage = languagePair.split("-")[0];
+    const outputLanguage = languagePair.split("-")[1];
+
+    req.send(`${directoryPath}::${inputLanguage}::${outputLanguage}`);
     req
       .reply("utf8")
       .then((res) => {
-        console.log(">>> [UI] initModelConfigSource: ", res);
+        if (res === "initialized") {
+          console.log(">>> [UI] initModelConfigSource: ", res);
+          loadModel();
+        }
       })
       .catch((err) => {
         console.log(">>> [UI] initModelConfigSource: error ->", err);
@@ -140,8 +151,6 @@ export default function App() {
   function loadModel() {
     console.log(">>> [UI] loadModel: ", languagePair);
     if (!directoryPath) return;
-
-    setModelState("loading");
 
     const req = rpc.request(LOAD_MODEL);
     const inputLanguage = languagePair.split("-")[0];

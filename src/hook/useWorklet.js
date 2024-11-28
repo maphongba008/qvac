@@ -1,6 +1,5 @@
 import { useCallback, useState, useEffect } from "react";
 import { Worklet } from "react-native-bare-kit";
-import { cacheDirectory } from "expo-file-system";
 
 const noReply = () => {
   /* No reply */
@@ -13,9 +12,7 @@ const useWorklet = (callback = noReply) => {
   const initWorklet = useCallback(() => {
     try {
       if (!worklet) {
-        const newWorklet = new Worklet({
-          assets: cacheDirectory + "/../config",
-        });
+        const newWorklet = new Worklet();
 
         setWorklet(newWorklet);
         return newWorklet;
