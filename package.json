@@ -7,9 +7,10 @@
     "start:clean": "watchman watch-del $PWD; watchman watch-project $PWD && npm run start",
     "bundle:android": "./script/bundle_android.sh",
     "bundle:ios": "./script/bundle_ios.sh",
-    "android": "npm run bundle:android && expo run:android",
+    "android": "npm run bundle-bare && expo run:android",
     "barelog": "adb logcat '*:S bare:*'",
-    "ios": "npm run bundle:ios && expo run:ios"
+    "ios": "npm run bundle-bare && expo run:ios",
+    "bundle-bare": "npm run bundle:android && npm run bundle:ios"
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.0",
