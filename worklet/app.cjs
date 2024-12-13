@@ -1,16 +1,17 @@
 const HyperDriveDL = require("qvac-lib-dl-hyperdrive");
 const Hyperswarm = require("hyperswarm");
 const Hyperbee = require("hyperbee");
-const MLCMarian = require("qvac-lib-inference-addon-mlc-marian");
 const CoreStore = require("corestore");
-const QvacMlcModelAddon = require("qvac-mlc-model-addon");
 const b4a = require("b4a");
+const {
+  MLCMarianOpusQ4F16,
+} = require("@tetherto/qvac-lib-inference-addon-mlc-marian-opus-q4f16");
+const RPC = require("bare-rpc");
 
 const { TRANSLATE, LOAD_MODEL, INIT_SOURCE } = require("./api");
 
 function getConfig() {
   return {
-    modelFilePath: QvacMlcModelAddon,
     weights: [
       "params_shard_0.bin",
       "params_shard_1.bin",
@@ -129,7 +130,7 @@ async function loadWeightsAndConfigs({ inputLanguage, outputLanguage }) {
 
   console.log(">>> [loadWeightsAndConfigs]: args loaded");
 
-  model = new MLCMarian(args, modelFilesConfig);
+  model = new MLCMarianOpusQ4F16(args, modelFilesConfig);
 
   console.log(
     ">>> [loadWeightsAndConfigs]: model created with",
@@ -163,7 +164,7 @@ async function translateStream(text, req) {
   }
 }
 
-const rpc = new BareKit.RPC((req) => {
+const rpc = new RPC(BareKit.IPC, (req) => {
   switch (req.command) {
     case INIT_SOURCE:
       const [directory, inputLang, outputLang] = req?.data

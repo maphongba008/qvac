@@ -9,34 +9,27 @@ import {
   Alert,
   ScrollView,
   SafeAreaView,
-  Platform,
 } from "react-native";
 import { useCallback, useRef, useEffect, useState } from "react";
-import * as FileSystem from "expo-file-system";
 import { useNavigation } from "expo-router";
 
 import useWorklet from "../hook/useWorklet";
 import { TRANSLATE, LOAD_MODEL, INIT_SOURCE } from "../../worklet/api";
-import { Asset } from "expo-asset";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Entypo from "@expo/vector-icons/Entypo";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Clipboard from "expo-clipboard";
-import { SettingsModal } from "../components/SettingsModal";
 import SelectInput from "../components/SelectInput";
 import b4a from "b4a";
 import { ModelStateIndicator } from "../components/ModelStateIndicator";
 
 export default function App() {
-  const [worklet, rpc] = useWorklet();
+  const [rpc, rpcReady, directoryPath] = useWorklet();
   const [inputText, setInputText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [stats, setStats] = useState("");
   const [translating, setTranslating] = useState(false);
-  const [fileUri, setFileUri] = useState();
-  const [directoryPath, setDirectoryPath] = useState(null);
   const [canSend, setCanSend] = useState(false);
-  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
 
   // possible modelState loading, ready, error
   const [modelState, setModelState] = useState("loading");
@@ -63,20 +56,11 @@ export default function App() {
   }, [navigation]);
 
   useEffect(() => {
-    // Load expo asset will need the directory path ready so it should run after loadFileSystem
-    loadFileSystem().then(() => {
-      loadExpoAsset();
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!worklet || !fileUri) return;
-    worklet.start(fileUri);
+    if (!rpcReady) return;
     initModelConfigSource();
-  }, [worklet, fileUri]);
+  }, [rpcReady]);
 
   useEffect(() => {
-    console.log(">>> [UI] modelState: ", modelState);
     if (modelState === "loading") return;
     initModelConfigSource();
 
@@ -91,7 +75,7 @@ export default function App() {
   }, [rpc, inputText, translating, modelState]);
 
   function initModelConfigSource() {
-    if (!directoryPath) return;
+    if (!directoryPath || !rpc) return;
 
     setModelState("loading");
 
@@ -138,16 +122,6 @@ export default function App() {
     });
   }
 
-  async function loadExpoAsset() {
-    const assetByPlatform =
-      Platform.OS === "ios"
-        ? require("../../worklet/app-ios.bundle")
-        : require("../../worklet/app-android.bundle");
-
-    const [asset] = await Asset.loadAsync([assetByPlatform]);
-    setFileUri(asset.localUri);
-  }
-
   function loadModel() {
     console.log(">>> [UI] loadModel: ", languagePair);
     if (!directoryPath) return;
@@ -173,19 +147,6 @@ export default function App() {
         setModelState("error");
       });
   }
-
-  const ensureDirectoryExist = async (dirPath) => {
-    const dirInfo = await FileSystem.getInfoAsync(dirPath);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
-    }
-  };
-
-  const loadFileSystem = async () => {
-    const coreStorePath = `${FileSystem.documentDirectory}weights/`;
-    await ensureDirectoryExist(coreStorePath);
-    setDirectoryPath(coreStorePath);
-  };
 
   const handleTranslate = useCallback(() => {
     if (!canSend) return;
@@ -214,19 +175,6 @@ export default function App() {
         cleanupTranslation();
       });
   }, [rpc, inputText, canSend]);
-
-  const deleteDir = async (dirPath) => {
-    const dirInfo = await FileSystem.getInfoAsync(dirPath);
-    if (dirInfo.exists) {
-      await FileSystem.deleteAsync(dirPath);
-      console.log(">>> [UI]: deleted dir");
-      setDirectoryPath(null);
-      setModelState("loading");
-      loadFileSystem().then(() => {
-        loadModel();
-      });
-    }
-  };
 
   const handleClearInput = () => {
     setInputText("");
@@ -358,32 +306,6 @@ export default function App() {
           <Text style={styles.text}>Translate</Text>
           {translating && <ActivityIndicator size="small" color="#FFFFFF" />}
         </TouchableOpacity>
-        <SettingsModal
-          visible={settingsModalVisible}
-          onClose={() => {
-            setSettingsModalVisible(false);
-          }}
-        >
-          <View style={styles.settingButtonsContainer}>
-            <TouchableOpacity
-              style={{
-                alignSelf: "flex-end",
-                marginBottom: 10,
-              }}
-              onPress={() => {
-                setSettingsModalVisible(false);
-              }}
-            >
-              <MaterialIcons name="close" size={24} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.settingButton}
-              onPress={() => deleteDir(directoryPath)}
-            >
-              <Text style={{ fontSize: 16 }}>Clear CoreStore</Text>
-            </TouchableOpacity>
-          </View>
-        </SettingsModal>
       </View>
     </SafeAreaView>
   );
@@ -475,19 +397,5 @@ const styles = StyleSheet.create({
   },
   customTextInput: {
     gap: 8,
-  },
-  settingButtonsContainer: {
-    flex: 1,
-    width: "100%",
-  },
-  settingButton: {
-    flex: 1,
-    maxHeight: 50,
-    marginBottom: 16,
-    borderRadius: 5,
-    backgroundColor: "white",
-    width: "100%",
-    justifyContent: "center",
-    padding: 8,
   },
 });
