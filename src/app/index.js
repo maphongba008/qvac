@@ -11,12 +11,10 @@ import {
   SafeAreaView,
 } from "react-native";
 import { useCallback, useRef, useEffect, useState } from "react";
-import { useNavigation } from "expo-router";
 
 import useWorklet from "../hook/useWorklet";
 import { TRANSLATE, LOAD_MODEL, INIT_SOURCE } from "../../worklet/api";
 import AntDesign from "@expo/vector-icons/AntDesign";
-import Entypo from "@expo/vector-icons/Entypo";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Clipboard from "expo-clipboard";
 import SelectInput from "../components/SelectInput";
@@ -35,25 +33,7 @@ export default function App() {
   const [modelState, setModelState] = useState("loading");
 
   const [languagePair, setLanguagePair] = useState("en-it");
-  const navigation = useNavigation();
   const scrollViewRef = useRef();
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Entypo.Button
-          style={{ margin: 0, backgroundColor: "white" }}
-          iconStyle={{ marginRight: 0, alignSelf: "flex-end" }}
-          name="dots-three-vertical"
-          size={20}
-          color="black"
-          onPress={() => {
-            setSettingsModalVisible(true);
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
 
   useEffect(() => {
     if (!rpcReady) return;
@@ -75,7 +55,7 @@ export default function App() {
   }, [rpc, inputText, translating, modelState]);
 
   function initModelConfigSource() {
-    if (!directoryPath || !rpc) return;
+    if (!directoryPath || !rpcReady) return;
 
     setModelState("loading");
 
@@ -199,7 +179,7 @@ export default function App() {
           scrollViewRef.current.scrollToEnd({ animated: true });
         }}
       >
-        <StatusBar style="auto" />
+        <StatusBar style="dark" />
         <View style={styles.inputContainer}>
           <ModelStateIndicator modelState={modelState} />
 
