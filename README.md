@@ -31,9 +31,6 @@ Run the following command to install the necessary dependencies:
  npm install
 ```
 
-> [!WARNING]
-> obs: there are 3 .tgz files inside the repo that will be installed as local packages, as soon as those packages are avaible on npm registry the `package.json` should be updated with the correct path to get those packages from npm instead of installing locally.
-
 ## **Running the Application on Android**
 
 Start the application by running the following command:
@@ -81,3 +78,9 @@ npm run ios
 This will intrinsectly run `npm run bundle:android` and `npm run bundle:ios` that is required to generate/update `app-android.bundle` file and `app-ios.bundle` file before running the app.
 
 Also if that is the first time you are running it expo will create the native project inside your rn project, the same happens for android.
+
+## **Checking logs**
+
+For android you can check the logs on logcat opening on Android Studio, or you can run `npm run barelog`
+
+For iOS you can run the project through xcode and check on log section.
