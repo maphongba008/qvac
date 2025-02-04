@@ -9,6 +9,7 @@ const {
 const RPC = require("bare-rpc");
 
 const { TRANSLATE, LOAD_MODEL, INIT_SOURCE } = require("./api");
+const { HYPERBEE_KEY } = require("./constants");
 
 function getConfig() {
   return {
@@ -47,10 +48,7 @@ async function initModelConfigSource({ dirPath, inputLang, outputLang }) {
 
   console.log(">>> [initModelConfigSource]: coreStore initialized");
 
-  const hyperbeeKey =
-    "8286a6d592f57751554c272cf52397770347117021c0fc54873f2c0ac7e0c467";
-
-  core = store.get({ key: b4a.from(hyperbeeKey, "hex") });
+  core = store.get({ key: b4a.from(HYPERBEE_KEY, "hex") });
 
   console.log(">>> [initModelConfigSource]: coreStore.get called");
 
