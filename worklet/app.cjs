@@ -83,11 +83,11 @@ async function initModelConfigSource({ dirPath, inputLang, outputLang }) {
 
   console.log(">>> [initModelConfigSource]: swarm joined");
 
-  foundPeers();
+  swarm.flush().then(foundPeers);
 
   console.log(">>> [initModelConfigSource]: foundPeers called");
 
-  await new Promise((resolve) => setTimeout(resolve, 10000));
+  // await new Promise((resolve) => setTimeout(resolve, 1000));
 
   await switchModelConfigSource({ inputLang, outputLang });
 }
@@ -150,11 +150,12 @@ async function translateStream(text, req) {
     const response = await model.run(text);
 
     for await (const output of response.iterate()) {
+      console.log("write ouput");
       reply.write(output);
     }
 
     const stats = response.stats;
-
+    console.log("send stats");
     reply.end(`**end**::${JSON.stringify({ stats })}`);
   } catch (error) {
     console.error("Translation error:", error);
@@ -163,6 +164,7 @@ async function translateStream(text, req) {
 }
 
 const rpc = new RPC(BareKit.IPC, (req) => {
+  console.log("receive rpc command", req.command);
   switch (req.command) {
     case INIT_SOURCE:
       const [directory, inputLang, outputLang] = req?.data

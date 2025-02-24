@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tether.to.qvactranslation"
+      "bundleIdentifier": "com.test.qvactranslation"
     },
     "android": {
       "adaptiveIcon": {

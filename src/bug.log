@@ -1,0 +1,71 @@
+=== first run
+
+Connection 1: received failure notification
+Connection 1: failed to connect 1:50, reason -1
+Connection 1: encountered error(1:50)
+Task <264EE114-3542-4B36-9036-B216B3F6FE4D>.<1> HTTP load failed, 0/0 bytes (error code: -1009 [1:50])
+Task <264EE114-3542-4B36-9036-B216B3F6FE4D>.<1> finished with error [-1009] Error Domain=NSURLErrorDomain Code=-1009 "The Internet connection appears to be offline." UserInfo={_kCFStreamErrorCodeKey=50, NSUnderlyingError=0x300138cc0 {Error Domain=kCFErrorDomainCFNetwork Code=-1009 "(null)" UserInfo={_NSURLErrorNWPathKey=unsatisfied (Local network prohibited), interface: en0[802.11], ipv4, ipv6, uses wifi, _kCFStreamErrorCodeKey=50, _kCFStreamErrorDomainKey=1}}, _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <264EE114-3542-4B36-9036-B216B3F6FE4D>.<1>, _NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <264EE114-3542-4B36-9036-B216B3F6FE4D>.<1>"
+), NSLocalizedDescription=The Internet connection appears to be offline., NSErrorFailingURLStringKey=http://192.168.1.5:8081/status, NSErrorFailingURLKey=http://192.168.1.5:8081/status, _kCFStreamErrorDomainKey=1}
+
+
+
+=== second run
+
+Running application main ({
+    initialProps =     {
+        concurrentRoot = 0;
+    };
+    rootTag = 1;
+})
+🟢 Registering module 'ExpoFetchModule'
+🟢 Registering module 'ExpoAsset'
+🟢 Registering module 'ExpoClipboard'
+🟢 Registering module 'ExponentConstants'
+🟢 Registering module 'ExponentFileSystem'
+🟢 Registering module 'FileSystemNext'
+🟢 Registering module 'ExpoFontLoader'
+🟢 Registering module 'ExpoKeepAwake'
+🟢 Registering module 'ExpoLinking'
+🟢 Registering module 'ExpoHead'
+nw_socket_handle_socket_event [C5:1] Socket SO_ERROR [61: Connection refused]
+nw_endpoint_flow_failed_with_error [C5 192.168.1.5:8097 in_progress socket-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, ipv6, dns, uses wifi)] already failing, returning
+nw_connection_get_connected_socket_block_invoke [C5] Client called nw_connection_get_connected_socket on unconnected nw_connection
+TCP Conn 0x3039990e0 Failed : error 0:61 [61]
+nw_connection_copy_connected_local_endpoint_block_invoke [C5] Client called nw_connection_copy_connected_local_endpoint on unconnected nw_connection
+nw_connection_copy_connected_remote_endpoint_block_invoke [C5] Client called nw_connection_copy_connected_remote_endpoint on unconnected nw_connection
+🟢 Creating JS object for module 'ExponentConstants'
+Unbalanced calls start/end for tag 19
+Running "main" with {"rootTag":1,"initialProps":{"concurrentRoot":false}}
+🟢 Creating JS object for module 'ExponentFileSystem'
+🟢 Creating JS object for module 'ExpoClipboard'
+🟢 Creating JS object for module 'ExpoKeepAwake'
+🟢 Creating JS object for module 'ExpoFontLoader'
+🟢 Creating JS object for module 'ExpoAsset'
+Error setting property 'pointerEvents' of RNSScreenStackHeaderConfig with tag #119: UIView base class does not support pointerEvent value: box-none
+'assets url', { hash: '1c87c66e345a4b2bf865cd3cc8a407bb',
+  localUri: 'file:///var/mobile/Containers/Data/Application/8B43DA1E-D91D-4AD9-9311-B5F58B3C5883/Library/Caches/ExponentAsset-1c87c66e345a4b2bf865cd3cc8a407bb.bundle',
+  width: null,
+  height: null,
+  downloading: false,
+  downloaded: true,
+  _downloadCallbacks: [],
+  name: 'app-ios',
+  type: 'bundle',
+  uri: 'http://192.168.1.5:8081/assets/?unstable_path=.%2Fworklet/app-ios.bundle?platform=ios&hash=1c87c66e345a4b2bf865cd3cc8a407bb' }
+>>> [INIT_SOURCE]: directory file:///var/mobile/Containers/Data/Application/8B43DA1E-D91D-4AD9-9311-B5F58B3C5883/Documents/weights/
+>>> [initModelConfigSource]: coreStore initialized
+>>> [initModelConfigSource]: coreStore.get called
+>>> [initModelConfigSource]: core ready
+>>> [initModelConfigSource]: db ready
+>>> [initModelConfigSource]: swarm on called
+>>> [initModelConfigSource]: foundPeers loaded
+>>> [initModelConfigSource]: swarm joined
+>>> [initModelConfigSource]: foundPeers called
+>>> [switchModelConfigSource]: drive key null
+>>> [INIT_SOURCE]: failed  TypeError: Cannot read properties of null (reading 'value')
+    at switchModelConfigSource (file:///var/mobile/Containers/Data/Application/8B43DA1E-D91D-4AD9-9311-B5F58B3C5883/Library/Caches/ExponentAsset-1c87c66e345a4b2bf865cd3cc8a407bb.bundle/worklet/app.cjs:102:27)
+    at async initModelConfigSource (file:///var/mobile/Containers/Data/Application/8B43DA1E-D91D-4AD9-9311-B5F58B3C5883/Library/Caches/ExponentAsset-1c87c66e345a4b2bf865cd3cc8a407bb.bundle/worklet/app.cjs:92:3)
+
+
+    

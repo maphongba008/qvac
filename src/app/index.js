@@ -20,149 +20,72 @@ import * as Clipboard from "expo-clipboard";
 import SelectInput from "../components/SelectInput";
 import b4a from "b4a";
 import { ModelStateIndicator } from "../components/ModelStateIndicator";
+import { Translator } from "../hook/Translator";
 
-export default function App() {
+const translate = (rpc, inputText, cb) => {
+  console.log("translate text", inputText);
+  const req = rpc.request(TRANSLATE);
+  req.send(JSON.stringify(inputText));
+  const reply = req.createResponseStream();
+  let text = "";
+  reply
+    .on("data", (data) => {
+      const incomingData = b4a.toString(data);
+      text += incomingData;
+    })
+    .on("end", () => {
+      Alert.alert("Translated", text);
+      cb();
+      // cleanupTranslation();
+    });
+};
+
+async function setup(rpc, directoryPath) {
+  console.log("initModelConfigSource", directoryPath);
+  const req = rpc.request(INIT_SOURCE);
+
+  req.send(`${directoryPath}::en::it`);
+  const res = await req.reply("utf8");
+  if (res !== "initialized") {
+    Alert.alert("Init model source failed", res);
+    return;
+  }
+
+  const req2 = rpc.request(LOAD_MODEL);
+
+  req2.send(`en::it`);
+
+  const res2 = await req2.reply("utf8");
+  if (res2 !== "loaded") {
+    Alert.alert("Load model failed", res2);
+    return;
+  }
+}
+
+function App() {
   const [rpc, rpcReady, directoryPath] = useWorklet();
-  const [inputText, setInputText] = useState("");
-  const [translatedText, setTranslatedText] = useState("");
-  const [stats, setStats] = useState("");
   const [translating, setTranslating] = useState(false);
   const [canSend, setCanSend] = useState(false);
 
   // possible modelState loading, ready, error
   const [modelState, setModelState] = useState("loading");
 
-  const [languagePair, setLanguagePair] = useState("en-it");
-  const scrollViewRef = useRef();
-
-  useEffect(() => {
-    if (!rpcReady) return;
-    initModelConfigSource();
-  }, [rpcReady]);
-
-  useEffect(() => {
-    if (modelState === "loading") return;
-    initModelConfigSource();
-
-    setTranslatedText("");
-    setInputText("");
-  }, [languagePair]);
-
-  useEffect(() => {
-    setCanSend(
-      rpc && inputText !== "" && !translating && modelState === "ready"
-    );
-  }, [rpc, inputText, translating, modelState]);
-
-  function initModelConfigSource() {
-    if (!directoryPath || !rpcReady) return;
-
-    setModelState("loading");
-
-    const req = rpc.request(INIT_SOURCE);
-
-    const inputLanguage = languagePair.split("-")[0];
-    const outputLanguage = languagePair.split("-")[1];
-
-    req.send(`${directoryPath}::${inputLanguage}::${outputLanguage}`);
-    req
-      .reply("utf8")
-      .then((res) => {
-        if (res === "initialized") {
-          console.log(">>> [UI] initModelConfigSource: ", res);
-          loadModel();
-        }
-      })
-      .catch((err) => {
-        console.log(">>> [UI] initModelConfigSource: error ->", err);
-      });
-  }
-
-  function updateLanguagePair({ value, from }) {
-    if (from === "input") {
-      setLanguagePair(`${value}-${languagePair.split("-")[1]}`);
-    } else {
-      setLanguagePair(`${languagePair.split("-")[0]}-${value}`);
-    }
-  }
-
-  function swapLanguages() {
-    if (modelState === "loading") return;
-    const [from, to] = languagePair.split("-");
-    setLanguagePair(`${to}-${from}`);
-  }
-
-  function cleanupTranslation() {
-    setTranslatedText((prev) => {
-      let text = prev.trim();
-      if (text.startsWith('"') && text.endsWith('"')) {
-        text = text.slice(1, -1);
-      }
-      return text;
+  const init = () => {
+    setup(rpc, directoryPath).then(() => {
+      setModelState("ready");
     });
-  }
-
-  function loadModel() {
-    console.log(">>> [UI] loadModel: ", languagePair);
-    if (!directoryPath) return;
-
-    const req = rpc.request(LOAD_MODEL);
-    const inputLanguage = languagePair.split("-")[0];
-    const outputLanguage = languagePair.split("-")[1];
-
-    req.send(`${inputLanguage}::${outputLanguage}`);
-
-    req
-      .reply("utf8")
-      .then((res) => {
-        if (res === "loaded") {
-          setModelState("ready");
-        } else {
-          setModelState("error");
-          Alert.alert("Load model failed", res);
-        }
-      })
-      .catch((err) => {
-        console.log(">>> [UI]: loadModel error ", err);
-        setModelState("error");
-      });
-  }
-
-  const handleTranslate = useCallback(() => {
-    if (!canSend) return;
-    setTranslating(true);
-    setTranslatedText("");
-    setStats(null);
-
-    const req = rpc.request(TRANSLATE);
-    req.send(JSON.stringify(inputText));
-
-    const reply = req.createResponseStream();
-
-    reply
-      .on("data", (data) => {
-        const incomingData = b4a.toString(data);
-        if (incomingData.includes("**end**")) {
-          const statsData = incomingData.split("::")[1];
-          const { stats } = JSON.parse(statsData);
-          setStats(parseFloat(stats.totalTokens / stats.totalTime).toFixed(2));
-          return;
-        }
-        setTranslatedText((prev) => `${prev} ${b4a.toString(data)}`);
-      })
-      .on("end", () => {
-        setTranslating(false);
-        cleanupTranslation();
-      });
-  }, [rpc, inputText, canSend]);
-
-  const handleClearInput = () => {
-    setInputText("");
-    setTranslatedText("");
   };
 
-  const handleCopy = async () => {
-    await Clipboard.setStringAsync(translatedText);
+  useEffect(() => {
+    setCanSend(!translating);
+  }, [translating]);
+  console.log("render APP");
+
+  const handleTranslate = () => {
+    setTranslating(true);
+    translate(rpc, "Hello", () => {
+      setTranslating(false);
+    });
   };
 
   return (
@@ -172,125 +95,28 @@ export default function App() {
         paddingTop: StatusBar.currentHeight,
       }}
     >
-      <ScrollView
-        ref={scrollViewRef}
-        contentContainerStyle={styles.container}
-        onContentSizeChange={() => {
-          scrollViewRef.current.scrollToEnd({ animated: true });
-        }}
-      >
-        <StatusBar style="dark" />
-        <View style={styles.inputContainer}>
-          <ModelStateIndicator modelState={modelState} />
-
-          <View style={styles.languageContainer}>
-            <SelectInput
-              value={languagePair.split("-")[0]}
-              label="Input Language"
-              disabled={modelState === "loading"}
-              options={[
-                { label: "English", value: "en" },
-                { label: "Italian", value: "it" },
-                { label: "German", value: "de" },
-              ].filter((lang) => lang.value !== languagePair.split("-")[1])}
-              onChange={(value) => {
-                updateLanguagePair({ value, from: "input" });
-              }}
-            />
-            <View style={styles.languageContainerSeparator}>
-              <AntDesign
-                style={{
-                  marginTop: 20,
-                  alignSelf: "center",
-                }}
-                name="swap"
-                size={25}
-                color="black"
-                onPress={swapLanguages}
-              />
-            </View>
-            <SelectInput
-              label="Output Language"
-              placeholder={{}}
-              disabled={modelState === "loading"}
-              value={languagePair.split("-")[1]}
-              options={[
-                { label: "English", value: "en" },
-                { label: "Italian", value: "it" },
-                { label: "German", value: "de" },
-              ].filter((lang) => lang.value !== languagePair.split("-")[0])}
-              onChange={(value) => {
-                updateLanguagePair({ value, from: "output" });
-              }}
-            />
-          </View>
-
-          <View style={styles.customTextInput}>
-            <View style={styles.inputHeader}>
-              <Text style={styles.inputLabel}>Input Text</Text>
-              <TouchableOpacity onPress={handleClearInput}>
-                <MaterialIcons name="delete" size={24} color="gray" />
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.textInput}
-              multiline
-              onChangeText={setInputText}
-              value={inputText}
-              placeholder="Type the text to translate"
-            />
-          </View>
-        </View>
-        {translatedText && (
-          <View style={styles.outputContainer}>
-            <AntDesign
-              style={{ alignSelf: "center" }}
-              name="arrowdown"
-              size={24}
-              color="black"
-            />
-            <View style={styles.customTextInput}>
-              <View style={styles.inputHeader}>
-                <Text style={styles.inputLabel}>Translated Text</Text>
-                <TouchableOpacity onPress={handleCopy}>
-                  <MaterialIcons name="content-copy" size={24} color="gray" />
-                </TouchableOpacity>
-              </View>
-
-              <TextInput
-                style={styles.textInput}
-                multiline
-                editable={false}
-                value={translatedText}
-                placeholder="The translation string will appear here"
-              />
-            </View>
-
-            {stats && (
-              <View style={styles.statsContainer}>
-                <Text style={styles.statText}>Speed: {stats} tokens/s</Text>
-              </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
+      <ModelStateIndicator modelState={modelState} />
       <View style={styles.buttonsContainer}>
         <TouchableOpacity
-          style={[
-            styles.button,
-            canSend ? styles.blueButton : styles.greyButton,
-          ]}
-          disabled={!canSend}
+          style={[styles.button, styles.blueButton]}
+          onPress={init}
+        >
+          <Text style={styles.text}>Setup</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.buttonsContainer}>
+        <TouchableOpacity
+          style={[styles.button, styles.blueButton]}
           onPress={handleTranslate}
         >
           <Text style={styles.text}>Translate</Text>
-          {translating && <ActivityIndicator size="small" color="#FFFFFF" />}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
+export default App;
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
